@@ -18,7 +18,7 @@
     <aside :class="['sidebar', { 'sidebar-expanded': sidebarExpanded }]" @mouseenter="expandSidebar" @mouseleave="collapseSidebar">
       <div class="logo-container">
         <!-- Company logo that links to the company website and opens in a new tab -->
-        <a href="https://tribusdigital.com/" target="_blank" rel="noopener noreferrer" class="logo">
+        <a href="/" class="logo">
           <img src="/tribus-icon.png" alt="Tribus Icon">
           <span class="nav-text">Tribus</span>
         </a>

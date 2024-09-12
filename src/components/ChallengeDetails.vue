@@ -1,5 +1,5 @@
 <template>
-  <div v-if="challenge">
+  <div class="challenge-detail"  v-if="challenge">
     <h1>{{ challenge.title.rendered }}</h1>
     <div v-html="challenge.content.rendered"></div>
 
@@ -98,7 +98,7 @@ const submitCode = async () => {
 button {
   margin-top: 16px;
   padding: 8px 16px;
-  background-color: #42b983;
+  background-color: var(--tribus-blue, #1E00FF);
   color: white;
   border: none;
   border-radius: 4px;
@@ -106,6 +106,11 @@ button {
 }
 
 button:hover {
-  background-color: #369870;
+  background-color: var(--tribus-blue, #1E00FF);
+}
+
+.challenge-detail {
+  max-width: 800px;
+  margin: auto;
 }
 </style>
