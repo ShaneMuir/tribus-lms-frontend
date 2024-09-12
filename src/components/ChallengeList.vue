@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div id="challengeList">
     <h1>Challenge List</h1>
     <div v-if="challenges.length">
       <div
@@ -46,3 +46,30 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+  #challengeList {
+    max-width: 800px;
+    margin: auto;
+  }
+
+  h1 {
+    margin-bottom: 1rem;
+  }
+
+  /* Styling for Challenge Items */
+  .challenge-item {
+    border: 2px solid #fafafa;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.05); /* Very light transparent background */
+    transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth animation */
+  }
+
+  /* Hover effect for challenge items */
+  .challenge-item:hover {
+    transform: translateY(-2px); /* Slight lift on hover */
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5); /* Add depth */
+  }
+</style>
