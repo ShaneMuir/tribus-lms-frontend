@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import ChallengeList from '../components/ChallengeList.vue';
 import ChallengeDetails from '../components/ChallengeDetails.vue';
+import UserLogin from '../components/UserLogin.vue';
+import UserRegister from '../components/UserRegister.vue';
 
 const routes = [
     {
@@ -13,6 +15,16 @@ const routes = [
         name: 'ChallengeDetails',
         component: ChallengeDetails,
         props: true, // Enables passing route params as props
+    },
+    {
+        path: '/login/',
+        name: 'UserLogin',
+        component: UserLogin,
+    },
+    {
+        path: '/register',
+        name: 'UserRegister',
+        component: UserRegister,
     },
 ];
 
