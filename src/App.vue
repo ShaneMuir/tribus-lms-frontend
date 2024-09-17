@@ -37,7 +37,7 @@
     </aside>
 
     <!-- Main content area for routing -->
-    <main>
+    <main :class="['main-content', { 'main-collapsed': sidebarExpanded }]">
       <router-view />
     </main>
   </div>
@@ -201,5 +201,34 @@ export default {
 .sidebar-expanded .nav-text {
   display: inline;
   margin-left: 1rem;
+}
+
+/* Main content area */
+.main-content {
+  margin-left: 80px; /* Default width when sidebar is collapsed */
+  transition: margin-left 0.3s ease;
+  padding: 1rem;
+}
+
+.main-collapsed {
+  margin-left: 250px; /* Adjust margin when sidebar is expanded */
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 60px;
+  }
+
+  .sidebar-expanded {
+    width: 200px;
+  }
+
+  .main-content {
+    margin-left: 60px;
+  }
+
+  .main-collapsed {
+    margin-left: 200px;
+  }
 }
 </style>

@@ -1,16 +1,38 @@
 <template>
-  <div class="challenge-detail"  v-if="challenge">
-    <h1>{{ challenge.title.rendered }}</h1>
-    <div v-html="challenge.content.rendered"></div>
+  <div class="challenge-page"  v-if="challenge">
+    <!-- Left section: Challenge info and test results -->
+    <div class="left-section">
+      <h1>{{ challenge.title.rendered }}</h1>
+      <div v-html="challenge.content.rendered"></div>
 
-    <!-- CodeMirror Integration -->
-    <Codemirror
-        v-model="code"
-        :extensions="extensions"
-        style="height: 400px; text-align: left;"
-    ></Codemirror>
+      <!-- Test case results -->
+      <div class="test-results">
+        <h3>Test Case Results:</h3>
+        <ul>
+          <li v-for="(result, index) in testResults" :key="index">
+            Test Case {{ index + 1 }}:
+            <strong :class="['status-badge', result.status === 'Passed' ? 'status-passed' : 'status-failed']">
+              {{ result.status }}
+            </strong><br />
+            Input: {{ result.input }}<br />
+            Expected: {{ result.expected }}<br />
+            Got: {{ result.output }}
+          </li>
+        </ul>
+      </div>
+    </div>
 
-    <button @click="submitCode">Submit</button>
+    <!-- Right section: Code editor and submit button -->
+    <div class="right-section">
+      <!-- CodeMirror Integration -->
+      <Codemirror
+          v-model="code"
+          :extensions="extensions"
+          style="height: 400px; text-align: left;"
+      ></Codemirror>
+
+      <button @click="submitCode">Submit</button>
+    </div>
   </div>
 </template>
 
@@ -24,16 +46,12 @@ import ChallengeService from '../services/ChallengeService.js';
 
 import axios from 'axios';
 
-const testCases = [
-  { input: '2 3', expectedOutput: '5' }, // Test case 1: Sum of 2 + 3
-  { input: '10 20', expectedOutput: '30' }, // Test case 2: Sum of 10 + 20
-];
+const testCases = [];
+const testResults = ref([]); // Holds the result of each test case
 
 // Reactive state for the challenge and code editor
 const challenge = ref(null);
-const code = ref('function calc($a, $b) {\n  # Write your code here... \n}');
-
-// Get the route object
+const code = ref();
 const route = useRoute();
 
 // Codemirror extensions for PHP and Dracula theme
@@ -44,6 +62,14 @@ onMounted(() => {
   const challengeId = route.params.id; // Get the challenge ID from the route
   ChallengeService.getChallenge(challengeId)
       .then((response) => {
+        code.value = response.data.meta._tribus_starter_code;
+
+        // Ensure test cases are pushed correctly
+        const fetchedTestCases = response.data.meta._tribus_test_cases;
+        if (Array.isArray(fetchedTestCases)) {
+          testCases.push(...fetchedTestCases); // Spread the array into testCases
+        }
+
         challenge.value = response.data;
       })
       .catch((error) => {
@@ -51,19 +77,40 @@ onMounted(() => {
       });
 });
 
+// Function to extract function name from user's code
+const extractFunctionName = (userCode) => {
+  const functionNameMatch = userCode.match(/function\s+(\w+)\s*\(/);
+  return functionNameMatch ? functionNameMatch[1] : null;
+};
+
 // Function to handle code submission
 const submitCode = async () => {
-  console.log('Code submitted:', code.value); //debugging
+  testResults.value = []; // Reset test results
+
+  // Extract function name from user's code
+  const functionName = extractFunctionName(code.value);
+
+  if (!functionName) {
+    console.error('No function name found in user code');
+    return;
+  }
 
   for (const testCase of testCases) {
-    const fullSourceCode = `${code.value}`;
+    // Dynamically inject the function call with the test case input
+    const inputArgs = testCase.input;
+    const testCode = `
+      ${code.value}
+      echo ${functionName}(${inputArgs});
+    `;
+
+    console.log(testCode);
 
     // Prepare the data for Judge0 API
     const submissionData = {
-      source_code: fullSourceCode, // User's PHP code
+      source_code: testCode, // User's PHP code + dynamic function call
       language_id: 68, // PHP language_id for Judge0
       stdin: '', // Optional, no need for stdin in this case
-      expected_output: testCase.expectedOutput, // Expected output
+      expected_output: testCase.output, // Expected output
     };
 
     const options = {
@@ -78,15 +125,16 @@ const submitCode = async () => {
     try {
       // Send the request to the Judge0 API
       const response = await axios.request(options);
-
-      // Capture output and check against expected output
       const output = response.data.stdout ? response.data.stdout.trim() : null;
 
-      if (output === testCase.expectedOutput) {
-        console.log(`Test case passed with input: ${testCase.input}`);
-      } else {
-        console.log(`Test case failed. Input: ${testCase.input}, Expected: ${testCase.expectedOutput}, Got: ${output}`);
-      }
+      // Add test case result
+      testResults.value.push({
+        input: testCase.input,
+        expected: testCase.output,
+        output: output,
+        status: output === testCase.output ? 'Passed' : 'Failed',
+      });
+
     } catch (error) {
       console.error('Error during code submission or execution:', error);
     }
@@ -95,6 +143,75 @@ const submitCode = async () => {
 </script>
 
 <style scoped>
+.challenge-page {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: auto;
+  padding: 20px;
+}
+
+.left-section {
+  flex: 40% 1 0;
+  border: 2px solid #fafafa;
+  padding: 20px;
+  border-radius: 6px;
+  max-height: 500px; /* Set a maximum height for the left section */
+  overflow-y: auto; /* Enable scrolling if content overflows */
+}
+
+.right-section {
+  border: 2px solid #fafafa;
+  flex: 55% 1 0;
+  padding: 20px;
+  border-radius: 6px;
+  max-height: 500px; /* Set a maximum height for the code editor */
+  overflow-y: auto; /* Enable scrolling if content overflows */
+}
+
+/* Styling for the test results */
+.test-results {
+  margin-top: 20px;
+  max-height: 340px;
+  overflow-y: auto; /* Enable scrolling if content overflows */
+}
+
+.test-results ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.test-results li {
+  background-color: #2c2c2c;
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  color: #fafafa;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 0.85rem;
+  border-radius: 12px;
+  color: white;
+  text-transform: uppercase;
+  margin-left: 5px;
+}
+
+.status-passed {
+  background-color: #28a745;
+}
+
+.status-failed {
+  background-color: #dc3545;
+}
+
+.test-results h3 {
+  margin-bottom: .5rem;
+}
+
 button {
   margin-top: 16px;
   padding: 8px 16px;
@@ -107,10 +224,5 @@ button {
 
 button:hover {
   background-color: var(--tribus-blue, #1E00FF);
-}
-
-.challenge-detail {
-  max-width: 800px;
-  margin: auto;
 }
 </style>
