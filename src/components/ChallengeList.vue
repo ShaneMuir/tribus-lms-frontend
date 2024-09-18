@@ -25,26 +25,23 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, onMounted } from 'vue';
 import ChallengeService from "../services/ChallengeService.js";
 
-export default {
-  name: "ChallengeList",
-  data() {
-    return {
-      challenges: [], // Initialize challenges as an empty array
-    };
-  },
-  mounted() {
-    ChallengeService.getChallenges()
-        .then((response) => {
-          this.challenges = response.data; // Fetch and assign the challenges
-        })
-        .catch((error) => {
-          console.error("Error fetching challenges:", error);
-        });
-  },
-};
+// Initialize challenges as a reactive variable
+const challenges = ref([]);
+
+// Fetch challenges on component mount
+onMounted(() => {
+  ChallengeService.getChallenges()
+      .then((response) => {
+        challenges.value = response.data; // Assign the fetched challenges to the reactive variable
+      })
+      .catch((error) => {
+        console.error("Error fetching challenges:", error);
+      });
+});
 </script>
 
 <style scoped>

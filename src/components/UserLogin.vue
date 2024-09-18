@@ -12,9 +12,12 @@
 <script setup>
 import { ref } from 'vue';
 import axios from 'axios';
+import useUser from '../composables/useUser'; // Import the user composable
 
 const username = ref('');
 const password = ref('');
+
+const { setUser, setToken } = useUser(); // Destructure the methods from the user composable
 
 const login = async () => {
   try {
@@ -23,23 +26,23 @@ const login = async () => {
       password: password.value,
     });
 
-    localStorage.setItem('token', response.data.token); // Store the token in localStorage
+    const token = response.data.token;
 
-    /** Making API Requests
-     * const token = localStorage.getItem('token');
-     * const options = {
-     *   headers: {
-     *     Authorization: `Bearer ${token}`
-     *   }
-     * };
-     */
+    // Now fetch the user's details
+    const userResponse = await axios.get('https://tribus-lms.test/wp-json/wp/v2/users/me', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
 
-    console.log(response.data);
+    // Update user and token in the composable
+    setToken(token);
+    setUser(userResponse.data);
 
-    alert('Login successful!');
+    alert('Login successful!'); // do more here...
 
   } catch (error) {
-    if(error.status === 403) {
+    if (error.response && error.response.status === 403) {
       alert('Invalid username or password');
     } else {
       alert('Login failed: ' + error.response.data.message);

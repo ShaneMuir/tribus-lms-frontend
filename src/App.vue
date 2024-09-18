@@ -4,18 +4,18 @@
     <header class="app-header">
       <div class="profile-section">
         <div class="profile-info">
-          <span class="score-rank">Rank: 12 | Score: 3450</span>
-          <img src="https://avatars.githubusercontent.com/u/37075817?s=100" alt="User Profile" class="profile-pic" @click="toggleProfileMenu" />
+          <span class="score-rank">Rank: 1 | Score: {{ getUserScore }}</span>
+          <img :src="user?.avatar_urls?.[96]" alt="User Profile" class="profile-pic" @click="toggleProfileMenu"/>
           <div v-if="profileMenuVisible" class="profile-dropdown">
             <a href="/profile">View Profile</a>
-            <a href="/logout">Logout</a>
+            <a href="/logout" @click.prevent="logout">Logout</a>
           </div>
         </div>
       </div>
     </header>
 
     <!-- Sidebar with logo and challenge icon list -->
-    <aside :class="['sidebar', { 'sidebar-expanded': sidebarExpanded }]" @mouseenter="expandSidebar" @mouseleave="collapseSidebar">
+    <aside :class="['sidebar', { 'sidebar-expanded': sidebarExpanded }]" @mouseenter="expand" @mouseleave="collapse">
       <div class="logo-container">
         <!-- Company logo that links to the company website and opens in a new tab -->
         <a href="/" class="logo">
@@ -43,26 +43,34 @@
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      profileMenuVisible: false,
-      sidebarExpanded: false, // Controls whether the sidebar is expanded or collapsed
-    };
-  },
-  methods: {
-    toggleProfileMenu() {
-      this.profileMenuVisible = !this.profileMenuVisible;
-    },
-    expandSidebar() {
-      this.sidebarExpanded = true;
-    },
-    collapseSidebar() {
-      this.sidebarExpanded = false;
+<script setup>
+import {onMounted, ref} from "vue";
+import useSidebar from "./composables/useSidebar.js";
+import useUser from './composables/useUser';
+import axios from "axios";
+
+const {expanded:sidebarExpanded, expand, collapse} = useSidebar();
+const { user, getUserScore, setUser, token, logout } = useUser();
+
+const profileMenuVisible = ref(false);
+
+const toggleProfileMenu = () => {
+  profileMenuVisible.value = !profileMenuVisible.value;
+}
+
+// If the token exists in localStorage, fetch user data and set it in the composable
+onMounted(async () => {
+  if (token.value) {
+    try {
+      const userResponse = await axios.get('https://tribus-lms.test/wp-json/wp/v2/users/me', {
+        headers: { Authorization: `Bearer ${token.value}` },
+      });
+      setUser(userResponse.data);
+    } catch (error) {
+      console.error('Error fetching user details:', error);
     }
   }
-};
+});
 </script>
 
 <style scoped>
