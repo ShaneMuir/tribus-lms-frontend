@@ -1,7 +1,12 @@
 import { ref, computed, readonly } from 'vue';
+import { useLocalStorage } from "@vueuse/core";
+import axios from "axios";
+import router from "@/router/index.js";
+import { toast } from "@/composables/useToast.js";
 
-const token = ref(localStorage.getItem('token') || null);
-const user = ref(JSON.parse(localStorage.getItem('user')) || null);
+
+const token = useLocalStorage('token', null);
+const user = ref(null);
 
 export default () => {
     const isUserSet = computed(() => user.value !== null);
@@ -11,12 +16,23 @@ export default () => {
             ...userData,
             score: userData.score || 0
         };
-        localStorage.setItem('user', JSON.stringify(user.value));
     };
+
+    const getUser = async () => {
+        if (token.value) {
+        try {
+          const userResponse = await axios.get('https://tribus-lms.test/wp-json/wp/v2/users/me', {
+            headers: { Authorization: `Bearer ${token.value}` },
+          });
+          setUser(userResponse.data);
+        } catch (error) {
+          console.error('Error fetching user details:', error);
+        }
+      }
+    }
 
     const setToken = (userToken) => {
         token.value = userToken;
-        localStorage.setItem('token', userToken);
     };
 
     const getUserScore = computed(() => {
@@ -26,8 +42,20 @@ export default () => {
     const logout = () => {
         user.value = null;
         token.value = null;
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
+
+        toast('Logout successful',
+            {
+                position: 'bottom-right',
+                timeout: 4000,
+                type: 'success',
+                transition: 'slide',
+            })
+
+        // Check if the current route is the UserProfile route
+        if (router.currentRoute.value.name === 'UserProfile') {
+            // Redirect to login or another page
+            router.push({ name: 'ChallengeList' });
+        }
     };
 
     return {
@@ -35,6 +63,7 @@ export default () => {
         user: readonly(user),
         token: readonly(token),
         setUser,
+        getUser,
         setToken,
         getUserScore,
         logout,

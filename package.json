@@ -15,11 +15,15 @@
     "@fortawesome/free-solid-svg-icons": "^6.6.0",
     "@fortawesome/vue-fontawesome": "^3.0.8",
     "@uiw/codemirror-theme-dracula": "^4.23.1",
+    "@vueuse/core": "^11.1.0",
     "axios": "^1.7.7",
     "codemirror": "^6.0.1",
+    "mosha-vue-toastify": "^1.0.23",
+    "pinia": "^2.2.2",
     "vue": "^3.4.37",
     "vue-codemirror": "^6.1.1",
-    "vue-router": "^4.4.3"
+    "vue-router": "^4.4.3",
+    "vue3-toastify": "^0.2.3"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.1.2",

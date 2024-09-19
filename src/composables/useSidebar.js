@@ -1,17 +1,20 @@
-import {ref} from "vue";
+// useSidebar.js
+import { ref } from 'vue';
 
-export default () => {
-    const expanded = ref(false); // Controls whether the sidebar is expanded or collapsed
+const sidebarExpanded = ref(false);
 
-    const expand = () => {
-        expanded.value = true;
-    }
+const expand = () => {
+    sidebarExpanded.value = true;
+};
 
-    const collapse = () => {
-        expanded.value = false;
-    }
+const collapse = () => {
+    sidebarExpanded.value = false;
+};
 
+export default function useSidebar() {
     return {
-        expanded, expand, collapse
-    }
+        expanded: sidebarExpanded,
+        expand,
+        collapse,
+    };
 }

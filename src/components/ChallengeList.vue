@@ -1,3 +1,20 @@
+<script setup>
+import { ref } from 'vue';
+import ChallengeService from "../services/ChallengeService.js";
+
+// Initialize challenges as a reactive variable
+const challenges = ref([]);
+
+// Fetch challenges on component mount
+ChallengeService.getChallenges()
+    .then((response) => {
+      challenges.value = response.data; // Assign the fetched challenges to the reactive variable
+    })
+    .catch((error) => {
+      console.error("Error fetching challenges:", error);
+    });
+</script>
+
 <template>
   <div id="challengeList">
     <h1>Challenge List</h1>
@@ -11,12 +28,12 @@
           {{ challenge.title.rendered }}
         </h2>
         <div v-if="challenge.content && challenge.content.rendered" v-html="challenge.content.rendered"></div>
-        <router-link
+        <RouterLink
             :to="{ name: 'ChallengeDetails', params: { id: challenge.id } }"
             class="btn btn-primary"
         >
           Go to Challenge
-        </router-link>
+        </RouterLink>
       </div>
     </div>
     <div v-else>
@@ -24,25 +41,6 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref, onMounted } from 'vue';
-import ChallengeService from "../services/ChallengeService.js";
-
-// Initialize challenges as a reactive variable
-const challenges = ref([]);
-
-// Fetch challenges on component mount
-onMounted(() => {
-  ChallengeService.getChallenges()
-      .then((response) => {
-        challenges.value = response.data; // Assign the fetched challenges to the reactive variable
-      })
-      .catch((error) => {
-        console.error("Error fetching challenges:", error);
-      });
-});
-</script>
 
 <style scoped>
   #challengeList {
