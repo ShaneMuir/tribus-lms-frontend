@@ -1,6 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue';
-import useUser from '@/composables/useUser'
+import { computed, ref, onMounted } from 'vue';
+import useUser from '@/composables/useUser';
+import { vOnClickOutside } from '@vueuse/components';
 import defaultAvatar from '@/assets/gravatar.png';
 
 const { user, getUserScore, isUserSet, logout } = useUser();
@@ -10,11 +11,18 @@ const avatarSrc = computed(() => {
 });
 
 const rank = computed(() => {
-  // Replace with your logic to get the rank
+  // We need to work out here how to going to do the ranking, we can use the rest api or create an endpoint to put all users scores in a object
+  // then can do something with that maybe or is there a better way?
+  // set to 1 for dev purposes...
   return user.value?.rank || 1; // Assuming the rank is in user object
 });
 
 const profileMenuVisible = ref(false);
+
+const closeMenu = () => {
+  profileMenuVisible.value = false;
+}
+
 const toggleProfileMenu = () => {
   profileMenuVisible.value = !profileMenuVisible.value;
 }
@@ -36,7 +44,7 @@ const toggleProfileMenu = () => {
         <div class="profile-wrapper">
           <img :src="avatarSrc" alt="User Profile" class="profile-pic" @click="toggleProfileMenu"/>
         </div>
-        <div v-if="profileMenuVisible" class="profile-dropdown">
+        <div v-if="profileMenuVisible" class="profile-dropdown" v-on-click-outside="closeMenu">
           <div v-if="isUserSet">
             <RouterLink :to="{name: 'UserProfile', params: { id: user.id } }">
               <font-awesome-icon :icon="['fas', 'user']" />
@@ -97,16 +105,6 @@ const toggleProfileMenu = () => {
 .profile-info {
   display: flex;
   align-items: center;
-}
-
-.score-rank {
-  margin-right: 1rem;
-  color: #fafafa;
-  font-size: 1.2rem;
-
-  span {
-    font-weight: 900;
-  }
 }
 
 .gold-badge {
