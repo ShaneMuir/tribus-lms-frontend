@@ -9,9 +9,11 @@ const username = ref('');
 const password = ref('');
 
 const { setUser, setToken } = useUser();
+const isLoading = ref(false);
 const router = useRouter();
 
 const login = async () => {
+  isLoading.value = true;
   try {
     const response = await axios.post('https://tribus-lms.test/wp-json/jwt-auth/v1/token', {
       username: username.value,
@@ -44,11 +46,25 @@ const login = async () => {
 
   } catch (error) {
     if (error.response && error.response.status === 403) {
-      toast.error('Invalid username or password');
+      toast('Invalid username or password',
+          {
+            position: 'bottom-right',
+            timeout: 5000,
+            type: 'danger',
+            transition: 'slide',
+          });
     } else {
-      toast.error('Login failed: ' + error.response.data.message);
+      toast('Login failed: ' + error.response.data.message,
+          {
+            position: 'bottom-right',
+            timeout: 5000,
+            type: 'danger',
+            transition: 'slide',
+          });
     }
     console.log(error);
+  } finally {
+    isLoading.value = false;
   }
 };
 </script>
@@ -59,7 +75,7 @@ const login = async () => {
     <form @submit.prevent="login">
       <input v-model="username" type="text" placeholder="Username" required />
       <input v-model="password" type="password" placeholder="Password" required />
-      <button type="submit">Login</button>
+      <button type="submit" :disabled="isLoading">Login</button>
     </form>
 
     <p class="register-link">
