@@ -1,163 +1,93 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import {ref, onMounted, computed} from 'vue';
 import { useRoute } from 'vue-router';
 import { Codemirror } from 'vue-codemirror';
 import { php } from '@codemirror/lang-php';
 import { dracula } from '@uiw/codemirror-theme-dracula';
 import ChallengeService from '../services/ChallengeService.js';
 import useUser from '@/composables/useUser.js';
-import axios from 'axios';
-import {toast} from "@/composables/useToast.js";
+import useChallenge from '@/composables/useChallenge.js';
+import { toast } from "@/composables/useToast.js";
 
-const { token, isUserSet } = useUser();
-const testCases = [];
-const testResults = ref([]); // Holds the result of each test case
-const completedChallenges = ref([]);
-
-// Reactive state for the challenge and code editor
-const challenge = ref(null);
-const code = ref();
+// Composition API & State
 const route = useRoute();
-
-// Fetch completed challenges when the component is mounted
-if (isUserSet.value) {
-  axios.get('https://tribus-lms.test/wp-json/wp/v2/users/me', {
-    headers: { Authorization: `Bearer ${token.value}` },
-  })
-      .then((response) => {
-        console.log(response.data);
-        completedChallenges.value = response.data.completed_challenges || [];
-      })
-      .catch((error) => {
-        console.error('Error fetching user details:', error);
-      });
-}
-
-// Codemirror extensions for PHP and Dracula theme
+const challengeId = Number(route.params.id);
+const { token, isUserSet, fetchCompletedChallenges, completedChallenges } = useUser();
+const { challenge, testCases, fetchChallenge } = useChallenge();
+const code = ref('');
+const testResults = ref([]);
 const extensions = [php({ plain: true }), dracula];
 
-// Fetch challenge data when the component is mounted
-onMounted(() => {
-  const challengeId = route.params.id; // Get the challenge ID from the route
-  ChallengeService.getChallenge(challengeId)
-      .then((response) => {
-        code.value = response.data.meta._tribus_starter_code;
-
-        // Ensure test cases are pushed correctly
-        const fetchedTestCases = response.data.meta._tribus_test_cases;
-        if (Array.isArray(fetchedTestCases)) {
-          testCases.push(...fetchedTestCases); // Spread the array into testCases
-        }
-
-        challenge.value = response.data;
-      })
-      .catch((error) => {
-        console.error('Error fetching challenge:', error);
-      });
+const tryAgainMode = ref(false);
+const isChallengeCompleted = computed(() => completedChallenges.value.includes(challengeId) && !tryAgainMode.value);
+// Fetch Challenge and User Data on Mounted
+onMounted(async () => {
+  if (isUserSet.value) await fetchCompletedChallenges();
+  await fetchChallenge(challengeId, code, testCases);
 });
 
-// Function to extract function name from user's code
+// Extract function name from user's code
 const extractFunctionName = (userCode) => {
-  const functionNameMatch = userCode.match(/function\s+(\w+)\s*\(/);
-  return functionNameMatch ? functionNameMatch[1] : null;
+  const match = userCode.match(/function\s+(\w+)\s*\(/);
+  return match ? match[1] : null;
 };
 
-// Function to handle code submission
+// Toggle "Try Again" mode
+const toggleTryAgain = () => {
+  tryAgainMode.value = !tryAgainMode.value;
+  testResults.value = [];
+};
+
+// Submit code function
 const submitCode = async () => {
   testResults.value = []; // Reset test results
-
-  // Extract function name from user's code
   const functionName = extractFunctionName(code.value);
 
   if (!functionName) {
-    console.error('No function name found in user code');
+    toast('No function name found in user code', { type: 'error' });
     return;
   }
 
-  for (const testCase of testCases) {
-    // Dynamically inject the function call with the test case input
+  // Run test cases
+  for (const testCase of testCases.value) {
     const inputArgs = testCase.input;
     const testCode = `
       ${code.value}
       echo ${functionName}(${inputArgs});
     `;
 
-    console.log(testCode);
+    const response = await ChallengeService.submitCode(testCode, testCase.output);
+    const output = response.data.stdout?.trim() || '';
 
-    // Prepare the data for Judge0 API
-    const submissionData = {
-      source_code: testCode, // User's PHP code + dynamic function call
-      language_id: 68, // PHP language_id for Judge0
-      stdin: '', // Optional, no need for stdin in this case
-      expected_output: testCase.output, // Expected output
-    };
+    testResults.value.push({
+      input: testCase.input,
+      expected: testCase.output,
+      output,
+      status: output === testCase.output ? 'Passed' : 'Failed',
+    });
+  }
 
-    const options = {
-      method: 'POST',
-      url: 'http://localhost:2358/submissions?base64_encoded=false&wait=true',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: submissionData,
-    };
-
-    try {
-      // Send the request to the Judge0 API
-      const response = await axios.request(options);
-      const output = response.data.stdout ? response.data.stdout.trim() : null;
-
-      // Add test case result
-      testResults.value.push({
-        input: testCase.input,
-        expected: testCase.output,
-        output: output,
-        status: output === testCase.output ? 'Passed' : 'Failed',
-      });
-
-    } catch (error) {
-      console.error('Error during code submission or execution:', error);
+  // Update progress if user is logged in
+  if (isUserSet.value) {
+    const updated = await ChallengeService.updateProgress(challengeId, token.value);
+    if (updated && updated.message === 'This challenge has already been completed.') {
+      toast(updated.message, { type: 'warning' });
     }
   }
 
-  // Update user progress if logged in
-  if (isUserSet.value) {
-    try {
-      const updateResponse = await axios.post('https://tribus-lms.test/wp-json/custom/v1/progress', {
-        challenge_id: route.params.id,
-      }, {
-        headers: {
-          Authorization: `Bearer ${token.value}`
-        }
-      });
-
-      if (updateResponse.data.message === 'This challenge has already been completed.') {
-        // Show a message to the user
-        toast(updateResponse.data.message,
-            {
-              position: 'bottom-right',
-              timeout: 5000,
-              type: 'danger',
-              transition: 'slide',
-            });
-        return; // Disable submit button or return early
-      }
-
-      console.log('User progress updated:', updateResponse.data);
-    } catch (error) {
-      console.error('Error updating user progress:', error);
-    }
+  // Reset "Try Again" mode after submission
+  if (tryAgainMode.value) {
+    tryAgainMode.value = false;
   }
 };
 </script>
 
 <template>
-  <div class="challenge-page"  v-if="challenge">
-    <!-- Left section: Challenge info and test results -->
+  <div v-if="challenge" class="challenge-page">
     <div class="left-section">
       <h1>{{ challenge.title.rendered }}</h1>
       <div v-html="challenge.content.rendered"></div>
 
-      <!-- Test case results -->
       <div class="test-results">
         <h3>Test Case Results:</h3>
         <ul>
@@ -174,16 +104,11 @@ const submitCode = async () => {
       </div>
     </div>
 
-    <!-- Right section: Code editor and submit button -->
     <div class="right-section">
-      <!-- CodeMirror Integration -->
-      <Codemirror
-          v-model="code"
-          :extensions="extensions"
-          style="height: 400px; text-align: left;"
-      ></Codemirror>
-
-      <button @click="submitCode" :disabled="completedChallenges.includes(route.params.id)">Submit</button>
+      <Codemirror v-model="code" :extensions="extensions" style="height: 400px; text-align: left;"></Codemirror>
+      <button @click="submitCode" :disabled="isChallengeCompleted">Submit</button>
+      <!-- Try Again button, only shown if challenge was previously completed -->
+      <button v-if="isChallengeCompleted" @click="toggleTryAgain">Try Again</button>
     </div>
   </div>
 </template>
