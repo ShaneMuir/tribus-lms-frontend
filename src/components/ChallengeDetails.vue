@@ -1,41 +1,3 @@
-<template>
-  <div class="challenge-page"  v-if="challenge">
-    <!-- Left section: Challenge info and test results -->
-    <div class="left-section">
-      <h1>{{ challenge.title.rendered }}</h1>
-      <div v-html="challenge.content.rendered"></div>
-
-      <!-- Test case results -->
-      <div class="test-results">
-        <h3>Test Case Results:</h3>
-        <ul>
-          <li v-for="(result, index) in testResults" :key="index">
-            Test Case {{ index + 1 }}:
-            <strong :class="['status-badge', result.status === 'Passed' ? 'status-passed' : 'status-failed']">
-              {{ result.status }}
-            </strong><br />
-            Input: {{ result.input }}<br />
-            Expected: {{ result.expected }}<br />
-            Got: {{ result.output }}
-          </li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- Right section: Code editor and submit button -->
-    <div class="right-section">
-      <!-- CodeMirror Integration -->
-      <Codemirror
-          v-model="code"
-          :extensions="extensions"
-          style="height: 400px; text-align: left;"
-      ></Codemirror>
-
-      <button @click="submitCode">Submit</button>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
@@ -43,16 +5,33 @@ import { Codemirror } from 'vue-codemirror';
 import { php } from '@codemirror/lang-php';
 import { dracula } from '@uiw/codemirror-theme-dracula';
 import ChallengeService from '../services/ChallengeService.js';
-
+import useUser from '@/composables/useUser.js';
 import axios from 'axios';
+import {toast} from "@/composables/useToast.js";
 
+const { token, isUserSet } = useUser();
 const testCases = [];
 const testResults = ref([]); // Holds the result of each test case
+const completedChallenges = ref([]);
 
 // Reactive state for the challenge and code editor
 const challenge = ref(null);
 const code = ref();
 const route = useRoute();
+
+// Fetch completed challenges when the component is mounted
+if (isUserSet.value) {
+  axios.get('https://tribus-lms.test/wp-json/wp/v2/users/me', {
+    headers: { Authorization: `Bearer ${token.value}` },
+  })
+      .then((response) => {
+        console.log(response.data);
+        completedChallenges.value = response.data.completed_challenges || [];
+      })
+      .catch((error) => {
+        console.error('Error fetching user details:', error);
+      });
+}
 
 // Codemirror extensions for PHP and Dracula theme
 const extensions = [php({ plain: true }), dracula];
@@ -139,8 +118,75 @@ const submitCode = async () => {
       console.error('Error during code submission or execution:', error);
     }
   }
+
+  // Update user progress if logged in
+  if (isUserSet.value) {
+    try {
+      const updateResponse = await axios.post('https://tribus-lms.test/wp-json/custom/v1/progress', {
+        challenge_id: route.params.id,
+      }, {
+        headers: {
+          Authorization: `Bearer ${token.value}`
+        }
+      });
+
+      if (updateResponse.data.message === 'This challenge has already been completed.') {
+        // Show a message to the user
+        toast(updateResponse.data.message,
+            {
+              position: 'bottom-right',
+              timeout: 5000,
+              type: 'danger',
+              transition: 'slide',
+            });
+        return; // Disable submit button or return early
+      }
+
+      console.log('User progress updated:', updateResponse.data);
+    } catch (error) {
+      console.error('Error updating user progress:', error);
+    }
+  }
 };
 </script>
+
+<template>
+  <div class="challenge-page"  v-if="challenge">
+    <!-- Left section: Challenge info and test results -->
+    <div class="left-section">
+      <h1>{{ challenge.title.rendered }}</h1>
+      <div v-html="challenge.content.rendered"></div>
+
+      <!-- Test case results -->
+      <div class="test-results">
+        <h3>Test Case Results:</h3>
+        <ul>
+          <li v-for="(result, index) in testResults" :key="index">
+            Test Case {{ index + 1 }}:
+            <strong :class="['status-badge', result.status === 'Passed' ? 'status-passed' : 'status-failed']">
+              {{ result.status }}
+            </strong><br />
+            Input: {{ result.input }}<br />
+            Expected: {{ result.expected }}<br />
+            Got: {{ result.output }}
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Right section: Code editor and submit button -->
+    <div class="right-section">
+      <!-- CodeMirror Integration -->
+      <Codemirror
+          v-model="code"
+          :extensions="extensions"
+          style="height: 400px; text-align: left;"
+      ></Codemirror>
+
+      <button @click="submitCode" :disabled="completedChallenges.includes(route.params.id)">Submit</button>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .challenge-page {
