@@ -4,9 +4,9 @@ import axios from "axios";
 import router from "@/router/index.js";
 import { toast } from "@/composables/useToast.js";
 
-
 const token = useLocalStorage('token', null);
 const user = ref(null);
+const completedChallenges = ref([]);
 
 export default () => {
     const isUserSet = computed(() => user.value !== null);
@@ -25,11 +25,20 @@ export default () => {
             headers: { Authorization: `Bearer ${token.value}` },
           });
           setUser(userResponse.data);
+          completedChallenges.value = (userResponse.data.completed_challenges || []).map(Number);
         } catch (error) {
-          console.error('Error fetching user details:', error);
+            console.error('Error fetching user details:', error);
         }
       }
     }
+
+    const fetchCompletedChallenges = async () => {
+        await getUser();
+    };
+
+    const isChallengeCompleted = (challengeId) => {
+        return completedChallenges.value.includes(challengeId);
+    };
 
     const setToken = (userToken) => {
         token.value = userToken;
@@ -66,6 +75,9 @@ export default () => {
         getUser,
         setToken,
         getUserScore,
+        completedChallenges: readonly(completedChallenges),
+        fetchCompletedChallenges,
+        isChallengeCompleted,
         logout,
     };
 };
