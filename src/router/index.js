@@ -51,6 +51,20 @@ export const initRouter = () => {
             await getUser();
         }
 
+        // Check if the user is trying to access UserLogin while logged in
+        if (to.name === 'UserLogin' && isUserSet.value) {
+            toast('You are already logged in!',
+                {
+                    position: 'bottom-right',
+                    timeout: 5000,
+                    type: 'info',
+                    transition: 'slide',
+                });
+            // Redirect to home page
+            next({ name: 'ChallengeList' });
+            return; // Exit to prevent further navigation
+        }
+
         // Check if the route requires authentication
         if (to.name === 'UserProfile' && !isUserSet.value) {
             toast('Not logged in!',
