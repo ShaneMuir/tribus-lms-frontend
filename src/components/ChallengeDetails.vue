@@ -9,6 +9,11 @@ import useUser from '@/composables/useUser.js';
 import useChallenge from '@/composables/useChallenge.js';
 import { toast } from "@/composables/useToast.js";
 
+// TODO add loading state when test results are pending/running
+// TODO add completed badge if challenge has already been completed
+// TODO add toasts when challenge is already completed to tell user no points are added.
+// TODO add more challenges to the backend and do more testing
+
 // Composition API & State
 const route = useRoute();
 const challengeId = Number(route.params.id);
@@ -19,7 +24,10 @@ const testResults = ref([]);
 const extensions = [php({ plain: true }), dracula];
 
 const tryAgainMode = ref(false);
-const isChallengeCompleted = computed(() => completedChallenges.value.includes(challengeId) && !tryAgainMode.value);
+const isChallengeCompleted = computed(() => {
+  return isUserSet.value && completedChallenges.value.includes(challengeId) && !tryAgainMode.value;
+});
+
 // Fetch Challenge and User Data on Mounted
 onMounted(async () => {
   if (isUserSet.value) await fetchCompletedChallenges();
