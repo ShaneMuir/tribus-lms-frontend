@@ -4,16 +4,17 @@ import axios from 'axios';
 import { useRouter } from 'vue-router';
 import useUser from '@/composables/useUser';
 import { toast } from "@/composables/useToast.js";
+import useLoading from "@/composables/useLoading.js";
 
 const username = ref('');
 const password = ref('');
 
 const { setUser, setToken } = useUser();
-const isLoading = ref(false);
+const { isLoading, startLoading, stopLoading } = useLoading();
 const router = useRouter();
 
 const login = async () => {
-  isLoading.value = true;
+  startLoading();
   try {
     const response = await axios.post('https://tribus-lms.test/wp-json/jwt-auth/v1/token', {
       username: username.value,
@@ -64,7 +65,7 @@ const login = async () => {
     }
     console.log(error);
   } finally {
-    isLoading.value = false;
+    stopLoading();
   }
 };
 </script>

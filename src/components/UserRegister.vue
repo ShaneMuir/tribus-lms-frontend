@@ -4,15 +4,18 @@ import axios from 'axios';
 import { useRouter } from 'vue-router';
 import useUser from '@/composables/useUser';
 import { toast } from "@/composables/useToast.js";
+import useLoading from "@/composables/useLoading.js";
 
 const username = ref('');
 const email = ref('');
 const password = ref('');
 
 const { setUser, setToken } = useUser();
+const { isLoading, startLoading, stopLoading } = useLoading();
 const router = useRouter();
 
 const register = async () => {
+  startLoading();
   try {
     const response = await axios.post('https://tribus-lms.test/wp-json/custom/v1/register', {
       username: username.value,
@@ -75,6 +78,8 @@ const register = async () => {
           type: 'danger',
           transition: 'slide',
         });
+  } finally {
+    stopLoading();
   }
 };
 </script>
@@ -86,7 +91,7 @@ const register = async () => {
       <input v-model="username" type="text" placeholder="Username" required />
       <input v-model="email" type="email" placeholder="Email" required />
       <input v-model="password" type="password" placeholder="Password" required />
-      <button type="submit">Register</button>
+      <button type="submit" :disabled="isLoading">Register</button>
     </form>
 
     <p class="login-link">
