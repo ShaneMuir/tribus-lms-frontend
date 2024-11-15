@@ -8,6 +8,7 @@ import ChallengeService from '../services/ChallengeService.js';
 import useUser from '@/composables/useUser.js';
 import useChallenge from '@/composables/useChallenge.js';
 import { toast } from "@/composables/useToast.js";
+import Modal from '@/components/Modal.vue';
 
 // TODO add loading state when test results are pending/running
 // TODO add completed badge if challenge has already been completed
@@ -28,6 +29,11 @@ const isChallengeCompleted = computed(() => {
   return isUserSet.value && completedChallenges.value.includes(challengeId) && !tryAgainMode.value;
 });
 
+// Modal state
+const showModal = ref(false);
+const modalGif = ref('');
+const modalMessage = ref('');
+
 // Fetch Challenge and User Data on Mounted
 onMounted(async () => {
   if (isUserSet.value) await fetchCompletedChallenges();
@@ -40,10 +46,26 @@ const extractFunctionName = (userCode) => {
   return match ? match[1] : null;
 };
 
+const userCodeBackup = ref(''); // Temporary backup for the user's code
+
 // Toggle "Try Again" mode
 const toggleTryAgain = () => {
+  if (!tryAgainMode.value) {
+    // Entering "Try Again" mode: save the current code
+    userCodeBackup.value = code.value;
+  } else {
+    // Exiting "Try Again" mode: restore the backup code if available
+    code.value = userCodeBackup.value || challenge.value?.meta?._tribus_starter_code || '';
+  }
+
   tryAgainMode.value = !tryAgainMode.value;
   testResults.value = [];
+};
+
+// Reset CodeMirror editor explicitly
+const resetCode = () => {
+  code.value = challenge.value?.meta?._tribus_starter_code || '';
+  userCodeBackup.value = ''; // Clear backup as user explicitly resets
 };
 
 // Submit code function
@@ -56,6 +78,8 @@ const submitCode = async () => {
     return;
   }
 
+  let allTestsPassed = true;
+
   // Run test cases
   for (const testCase of testCases.value) {
     const inputArgs = testCase.input;
@@ -67,13 +91,28 @@ const submitCode = async () => {
     const response = await ChallengeService.submitCode(testCode, testCase.output);
     const output = response.data.stdout?.trim() || '';
 
+    const passed = output === testCase.output;
+
     testResults.value.push({
       input: testCase.input,
       expected: testCase.output,
       output,
       status: output === testCase.output ? 'Passed' : 'Failed',
     });
+
+    if (!passed) {
+      allTestsPassed = false;
+    }
   }
+
+  if (allTestsPassed) {
+    modalGif.value = 'https://i.pinimg.com/originals/64/45/ee/6445ee2274a782a7c528303e9bd823d7.gif';
+    modalMessage.value = 'Congratulations! You completed the challenge successfully!';
+  } else {
+    modalGif.value = 'https://i.gifer.com/XZ9.gif';
+    modalMessage.value = 'Oops! Some test cases failed. Try again!';
+  }
+  showModal.value = true;
 
   // Update progress if user is logged in
   if (isUserSet.value) {
@@ -115,10 +154,14 @@ const submitCode = async () => {
     <div class="right-section">
       <Codemirror v-model="code" :extensions="extensions" style="height: 400px; text-align: left;"></Codemirror>
       <button @click="submitCode" :disabled="isChallengeCompleted">Submit</button>
-      <!-- Try Again button, only shown if challenge was previously completed -->
-      <button v-if="isChallengeCompleted" @click="toggleTryAgain">Try Again</button>
+      <button v-if="isChallengeCompleted" @click="toggleTryAgain">
+        {{ tryAgainMode ? "Cancel Try Again" : "Try Again" }}
+      </button>
+      <button @click="resetCode" v-if="tryAgainMode">Reset Code</button>
     </div>
   </div>
+
+  <Modal :visible="showModal" :gif="modalGif" :message="modalMessage" @close="showModal = false" />
 </template>
 
 <style scoped>
