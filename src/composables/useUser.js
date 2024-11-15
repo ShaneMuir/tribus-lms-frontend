@@ -52,6 +52,8 @@ export default () => {
         user.value = null;
         token.value = null;
 
+        completedChallenges.value = null; // reset completedChallenges reactive on logout
+
         toast('Logout successful',
             {
                 position: 'bottom-right',
