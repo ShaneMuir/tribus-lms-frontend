@@ -6,6 +6,8 @@ import useUser from '@/composables/useUser';
 import { toast } from "@/composables/useToast.js";
 import useLoading from "@/composables/useLoading.js";
 
+// TODO improve the ajax posts responses
+
 const username = ref('');
 const email = ref('');
 const password = ref('');
