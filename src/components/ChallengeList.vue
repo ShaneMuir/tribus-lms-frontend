@@ -3,11 +3,14 @@ import {onMounted, ref} from 'vue';
 import ChallengeService from "../services/ChallengeService.js";
 import useUser from '@/composables/useUser.js';
 
-const { fetchCompletedChallenges, isChallengeCompleted } = useUser();
+const { isChallengeCompleted } = useUser();
 const challenges = ref([]);
 
+// TODO Split challenges into catgories: easy, medium, hard.
+// TODO Paginate results
+
+
 onMounted(async () => {
-  await fetchCompletedChallenges();
   try {
     const response = await ChallengeService.getChallenges();
     challenges.value = response.data;

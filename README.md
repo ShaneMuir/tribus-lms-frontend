@@ -6,6 +6,11 @@
 
 Tribus LMS is a Learning Management System built with a VueJS frontend and a WordPress headless backend. It enables users to complete coding challenges in a live coding environment similar to platforms like Codewars. The system evaluates code submissions using test cases stored on the backend and executed via Judge0.
 
+## TODO:
+- Add a chatbot AI widget
+- Train model so user can't just ask bot for answers
+- Make the bot be helpful and progress challenges along
+
 ## Tech Stack
 - **Frontend**: VueJS with CodeMirror for the live coding environment.
 - **Backend**: WordPress with custom post types (challenges) and REST API endpoints.

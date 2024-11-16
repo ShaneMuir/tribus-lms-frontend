@@ -7,6 +7,7 @@ import { toast } from "@/composables/useToast.js";
 const token = useLocalStorage('token', null);
 const user = ref(null);
 const completedChallenges = ref([]);
+const isFetching = ref(false);
 
 export default () => {
     const isUserSet = computed(() => user.value !== null);
@@ -19,7 +20,9 @@ export default () => {
     };
 
     const getUser = async () => {
-        if (token.value) {
+        if (!token.value || isFetching.value) return;
+
+        isUserSet.value = true;
         try {
           const userResponse = await axios.get('https://tribus-lms.test/wp-json/wp/v2/users/me', {
             headers: { Authorization: `Bearer ${token.value}` },
@@ -28,9 +31,10 @@ export default () => {
           completedChallenges.value = (userResponse.data.completed_challenges || []).map(Number);
         } catch (error) {
             console.error('Error fetching user details:', error);
+        } finally {
+            isFetching.value = false;
         }
-      }
-    }
+    };
 
     const fetchCompletedChallenges = async () => {
         await getUser();
@@ -48,11 +52,19 @@ export default () => {
         return user.value ? user.value.score : 0;
     });
 
+    const updateUserProgress = (challengeId, newScore) => {
+        if (!completedChallenges.value.includes(challengeId)) {
+            completedChallenges.value.push(challengeId);
+        }
+        if (user.value) {
+            user.value.score = newScore;
+        }
+    };
+
     const logout = () => {
         user.value = null;
         token.value = null;
-
-        completedChallenges.value = null; // reset completedChallenges reactive on logout
+        completedChallenges.value = null;
 
         toast('Logout successful',
             {
@@ -80,6 +92,7 @@ export default () => {
         completedChallenges: readonly(completedChallenges),
         fetchCompletedChallenges,
         isChallengeCompleted,
+        updateUserProgress,
         logout,
     };
 };

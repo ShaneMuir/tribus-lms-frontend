@@ -12,11 +12,11 @@ const judge0Client = axios.create({
 
 export default {
     getChallenges() {
-        return apiClient.get('/challenge');
+        return apiClient.get('/wp/v2/challenge');
     },
 
     getChallenge(id) {
-        return apiClient.get(`/challenge/${id}`);
+        return apiClient.get(`/wp/v2/challenge/${id}`);
     },
 
     async submitCode(sourceCode, expectedOutput) {

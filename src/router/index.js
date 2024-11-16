@@ -3,9 +3,12 @@ import ChallengeList from '../components/ChallengeList.vue';
 import ChallengeDetails from '../components/ChallengeDetails.vue';
 import UserLogin from '../components/UserLogin.vue';
 import UserRegister from '../components/UserRegister.vue';
-import useUser from "../composables/useUser.js";
 import UserProfile from "../components/UserProfile.vue";
+
+import useUser from "../composables/useUser.js";
 import { toast } from "../composables/useToast.js";
+
+// TODO: Consider if getUser() is overkill here and maybe just need calling on app route
 
 const routes = [
     {
@@ -47,7 +50,7 @@ export const initRouter = () => {
 
     router.beforeEach(async (to, from, next) => {
         // Refresh user info if coming from an undefined route
-        if (typeof from.name === 'undefined') {
+        if (typeof from.name === 'undefined' && !isUserSet.value) {
             await getUser();
         }
 

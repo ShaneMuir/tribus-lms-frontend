@@ -18,11 +18,13 @@ import Modal from '@/components/Modal.vue';
 // Composition API & State
 const route = useRoute();
 const challengeId = Number(route.params.id);
-const { token, isUserSet, fetchCompletedChallenges, completedChallenges } = useUser();
+const { token, isUserSet, completedChallenges, updateUserProgress } = useUser();
 const { challenge, testCases, fetchChallenge } = useChallenge();
 const code = ref('');
 const testResults = ref([]);
 const extensions = [php({ plain: true }), dracula];
+
+const isLoadingTests = ref(false); // Add a loading state
 
 const tryAgainMode = ref(false);
 const isChallengeCompleted = computed(() => {
@@ -36,7 +38,6 @@ const modalMessage = ref('');
 
 // Fetch Challenge and User Data on Mounted
 onMounted(async () => {
-  if (isUserSet.value) await fetchCompletedChallenges();
   await fetchChallenge(challengeId, code, testCases);
 });
 
@@ -73,6 +74,8 @@ const submitCode = async () => {
   testResults.value = []; // Reset test results
   const functionName = extractFunctionName(code.value);
 
+  isLoadingTests.value = true; // Set loading state to true
+
   if (!functionName) {
     toast('No function name found in user code', { type: 'error' });
     return;
@@ -105,27 +108,40 @@ const submitCode = async () => {
     }
   }
 
-  if (allTestsPassed) {
-    modalGif.value = 'https://i.pinimg.com/originals/64/45/ee/6445ee2274a782a7c528303e9bd823d7.gif';
-    modalMessage.value = 'Congratulations! You completed the challenge successfully!';
-  } else {
-    modalGif.value = 'https://i.gifer.com/XZ9.gif';
-    modalMessage.value = 'Oops! Some test cases failed. Try again!';
-  }
+  modalGif.value = allTestsPassed
+      ? 'https://i.pinimg.com/originals/64/45/ee/6445ee2274a782a7c528303e9bd823d7.gif'
+      : 'https://i.gifer.com/XZ9.gif';
+  modalMessage.value = allTestsPassed
+      ? 'Congratulations! You completed the challenge successfully!'
+      : 'Oops! Some test cases failed. Try again!';
   showModal.value = true;
 
-  // Update progress if user is logged in
-  if (isUserSet.value) {
-    const updated = await ChallengeService.updateProgress(challengeId, token.value);
-    if (updated && updated.message === 'This challenge has already been completed.') {
-      toast(updated.message, { type: 'warning' });
+  if (isUserSet.value && token.value && allTestsPassed) {
+    try {
+      const serverResponse = await ChallengeService.updateProgress(challengeId, token.value);
+
+      if (serverResponse) {
+        if (serverResponse.message === 'This challenge has already been completed.') {
+          toast(serverResponse.message, { type: 'warning' });
+        } else if (serverResponse.new_score !== undefined) {
+          updateUserProgress(challengeId, serverResponse.new_score);
+          toast(`Progress updated successfully, ${serverResponse.score} points added!`, { type: 'success' });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating user progress:', error);
+      toast('An error occurred while updating progress. Please try again.', { type: 'error' });
     }
+  } else if (!isUserSet.value || !token.value) {
+    toast('You need to log in to update your progress.', { type: 'warning' });
   }
 
   // Reset "Try Again" mode after submission
   if (tryAgainMode.value) {
     tryAgainMode.value = false;
   }
+
+  isLoadingTests.value = false; // Set loading state to false
 };
 </script>
 
@@ -137,6 +153,9 @@ const submitCode = async () => {
 
       <div class="test-results">
         <h3>Test Case Results:</h3>
+        <div v-if="isLoadingTests" class="loading-state">
+          <p>Running tests, please wait...</p>
+        </div>
         <ul>
           <li v-for="(result, index) in testResults" :key="index">
             Test Case {{ index + 1 }}:
