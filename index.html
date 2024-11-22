@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tribus LMS</title>
 
+
+    <!-- TODO: think about thsi script tag as for the quiz this bot will be irrelavant so might want to only include the bot on
+        TODO on the challengeDetail view.
+        -->
     <script type="module">
           import Chatbot from "https://cdn.jsdelivr.net/npm/flowise-embed@1.3.14/dist/web.js"
 
@@ -51,6 +55,7 @@
                   },
                   chatWindow: {
                       showTitle: true,
+                      width: 500,
                       title: 'Tribus Assistant',
                       titleAvatarSrc: '/public/tribus-icon.png',
                       welcomeMessage: 'Yo! Ask me about your coding challenges or LMS features, and I\'ll guide you towards solutions.',
